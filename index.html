@@ -6,21 +6,98 @@
   <title>Джарвис</title>
   <style>
     body { margin: 0; min-height: 100vh; display: flex; flex-direction: column;
-           align-items: center; justify-content: center; gap: 24px;
+           align-items: center; justify-content: center; gap: 20px; padding: 20px;
            background: #0b1020; color: #e8f0ff; font-family: sans-serif; text-align: center; }
-    h1 { font-size: 28px; margin: 0; }
+    h1 { font-size: 26px; margin: 0; }
     button { font-size: 20px; padding: 18px 32px; border: 0; border-radius: 16px;
              background: #3b82f6; color: white; }
+    #status { font-size: 18px; min-height: 26px; }
+    .bar { width: 260px; height: 14px; background: #1c2540; border-radius: 7px; overflow: hidden; }
+    #level { height: 100%; width: 0%; background: #22c55e; }
+    input[type=range] { width: 260px; }
+    small { color: #8a96b8; }
   </style>
 </head>
 <body>
-  <h1>🤖 Привет, я Джарвис</h1>
-  <button id="btn">Проверить голос</button>
+  <h1>🤖 Джарвис</h1>
+  <button id="start">Включить прослушивание</button>
+  <div id="status">Выключен</div>
+
+  <div class="bar"><div id="level"></div></div>
+  <small>Громкость звука вокруг</small>
+
+  <label>
+    <small>Чувствительность к хлопку</small><br>
+    <input type="range" id="sens" min="1" max="10" value="5">
+  </label>
+
   <script>
-    document.getElementById("btn").onclick = () => {
-      const phrase = new SpeechSynthesisUtterance("Привет! Я Джарвис, твой помощник по Instagram.");
-      phrase.lang = "ru-RU";
-      speechSynthesis.speak(phrase);
+    const statusEl = document.getElementById("status");
+    const levelEl = document.getElementById("level");
+    const sensEl = document.getElementById("sens");
+    const startBtn = document.getElementById("start");
+
+    let lastClap = 0;
+
+    function say(text) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "ru-RU";
+      speechSynthesis.speak(u);
+    }
+
+    function onClap() {
+      statusEl.textContent = "👏 Хлопок! Я слушаю";
+      say("Слушаю тебя");
+      setTimeout(() => { statusEl.textContent = "Жду хлопок…"; }, 2500);
+    }
+
+    startBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        });
+
+        // Не даём экрану гаснуть (если телефон это поддерживает)
+        try { await navigator.wakeLock.request("screen"); } catch (e) {}
+
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === "suspended") await ctx.resume();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 1024;
+        ctx.createMediaStreamSource(stream).connect(analyser);
+        const data = new Uint8Array(analyser.fftSize);
+
+        let baseline = 0.02;
+        startBtn.style.display = "none";
+        statusEl.textContent = "Жду хлопок…";
+        say("Я готов. Хлопни в ладоши.");
+
+        function loop() {
+          analyser.getByteTimeDomainData(data);
+          let peak = 0;
+          for (let i = 0; i < data.length; i++) {
+            const v = Math.abs(data[i] - 128) / 128;
+            if (v > peak) peak = v;
+          }
+          levelEl.style.width = Math.min(100, peak * 100) + "%";
+
+          // чем выше чувствительность, тем ниже порог
+          const threshold = 0.9 - sensEl.value * 0.07;
+          const now = Date.now();
+          const talking = speechSynthesis.speaking;
+
+          if (!talking && peak > threshold && peak > baseline * 4 && now - lastClap > 2000) {
+            lastClap = now;
+            onClap();
+          }
+          baseline = baseline * 0.98 + peak * 0.02;
+          requestAnimationFrame(loop);
+        }
+        loop();
+      } catch (e) {
+        statusEl.textContent = "Нет доступа к микрофону. Разреши его в настройках браузера.";
+      }
     };
   </script>
 </body>
