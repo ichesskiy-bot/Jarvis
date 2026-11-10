@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Джарвис</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+           align-items: center; justify-content: center; gap: 24px;
+           background: #0b1020; color: #e8f0ff; font-family: sans-serif; text-align: center; }
+    h1 { font-size: 28px; margin: 0; }
+    button { font-size: 20px; padding: 18px 32px; border: 0; border-radius: 16px;
+             background: #3b82f6; color: white; }
+  </style>
+</head>
+<body>
+  <h1>🤖 Привет, я Джарвис</h1>
+  <button id="btn">Проверить голос</button>
+  <script>
+    document.getElementById("btn").onclick = () => {
+      const phrase = new SpeechSynthesisUtterance("Привет! Я Джарвис, твой помощник по Instagram.");
+      phrase.lang = "ru-RU";
+      speechSynthesis.speak(phrase);
+    };
+  </script>
+</body>
+</html>
