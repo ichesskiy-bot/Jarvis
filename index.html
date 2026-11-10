@@ -39,12 +39,12 @@
 
     let lastClap = 0;
 
-    function say(text) {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "ru-RU";
-      speechSynthesis.speak(u);
-    }
+    unction say(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "ru-RU";
+  u.volume = 1;
+  speechSynthesis.speak(u);
+}
 
     function onClap() {
       statusEl.textContent = "👏 Хлопок! Я слушаю";
@@ -53,6 +53,8 @@
     }
 
     startBtn.onclick = async () => {
+      const warm = new SpeechSynthesisUtterance(" ");
+warm.volume = 0; speechSynthesis.speak(warm);
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
